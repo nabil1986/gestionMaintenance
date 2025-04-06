@@ -221,12 +221,7 @@ app.get("/etatDevices", (req, res) => {
 // Récupérer tous les équipements
 app.get("/devices", (req, res) => {
   const query = `
-    SELECT
-        id, device_name, numero_inventaire, localisation, frequence, dateInstallation,
-        description, date_prochain_preventif, etat_id, tempsIndisponibiliteTotal,
-        TIMESTAMPDIFF(MINUTE, dateInstallation, NOW()) AS totalMinutes,
-        IFNULL(100 - (tempsIndisponibiliteTotal / NULLIF(TIMESTAMPDIFF(MINUTE, dateInstallation, NOW()), 0)) * 100, 100) AS tauxDisponibilite
-    FROM devices
+    SELECT * FROM devices
   `;
 
   db.query(query, (err, results) => {
@@ -251,16 +246,67 @@ app.get('/devicesCount', (req, res) => {
   });
 });
 
-app.get('/devices', (req, res) => {
-  const query = 'SELECT * FROM devices';
-  db.query(query, (err, results) => {
-    if (err) {
-      res.status(500).send(err);
-    } else {
-      res.status(200).send(results);
-    }
+app.get("/temps-indisponibilite", (req, res) => {
+  const queryDevices = `SELECT numero_inventaire, dateInstallation FROM devices`;
+
+  db.query(queryDevices, (err, devices) => {
+    if (err) return res.status(500).send("Erreur lors de la récupération des appareils");
+
+    const results = [];
+    let processed = 0;
+
+    if (devices.length === 0) return res.send([]);
+
+    devices.forEach((device) => {
+      const numero = device.numero_inventaire;
+      const dateInstallation = new Date(device.dateInstallation);
+      const now = new Date();
+      const heuresDepuisInstallation = (now - dateInstallation) / 3600000;
+
+      const preventifQuery = `
+        SELECT SUM(TIMESTAMPDIFF(SECOND, date_debut_intervention, date_fin_intervention)) AS total_seconds
+        FROM operationprevntif
+        WHERE numero_inventaire = ? AND date_debut_intervention IS NOT NULL AND date_fin_intervention IS NOT NULL
+      `;
+
+      const correctifQuery = `
+        SELECT SUM(TIMESTAMPDIFF(SECOND, date_debut_intervention, date_fin_intervention)) AS total_seconds
+        FROM operationcorrective
+        WHERE numero_inventaire = ? AND date_debut_intervention IS NOT NULL AND date_fin_intervention IS NOT NULL
+      `;
+
+      db.query(preventifQuery, [numero], (err1, preventifRows) => {
+        if (err1) return res.status(500).send("Erreur lors du calcul préventif");
+
+        db.query(correctifQuery, [numero], (err2, correctifRows) => {
+          if (err2) return res.status(500).send("Erreur lors du calcul correctif");
+
+          const preventifSec = preventifRows[0].total_seconds || 0;
+          const correctifSec = correctifRows[0].total_seconds || 0;
+          const indispoHeures = (preventifSec + correctifSec) / 3600;
+
+          let taux = 100;
+          if (heuresDepuisInstallation > 0) {
+            taux = ((heuresDepuisInstallation - indispoHeures) / heuresDepuisInstallation) * 100;
+          }
+
+          results.push({
+            numero_inventaire: numero,
+            taux_disponibilite: Math.max(0, taux.toFixed(2)),
+          });
+
+          processed++;
+          if (processed === devices.length) {
+            res.send(results);
+          }
+        });
+      });
+    });
   });
 });
+
+
+
 
 //--------------------------------------------------------- Anomalies
 
@@ -782,7 +828,7 @@ app.post("/commencerInterventionPreventif", (req, res) => {
 app.put("/operationPreventif/:id", (req, res) => {
   const { id } = req.params;
   const { description_preventif, operateur } = req.body;
-  const date_fin_intervention = new Date().toISOString().split('T')[0]; // On utilise la date du jour
+  const date_fin_intervention = new Date().toISOString().slice(0, 19).replace("T", " "); // Format YYYY-MM-DD HH:MM:SS
   const etat = 1; // Remettre l'équipement en service
 
   console.log("Requête reçue:", req.body, req.params);
@@ -972,4 +1018,4 @@ app.get("/mttr", (req, res) => {
 
 
 // Lancer le serveur
-module.exports = app;
+app.listen(5000, () => console.log("Serveur démarré sur http://localhost:5000"));
