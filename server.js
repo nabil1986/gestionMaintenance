@@ -203,6 +203,8 @@ app.get("/localisations", (req, res) => {
   });
 });
 
+
+app.use('/frequences', authenticateJWT);
 // Récupérer les fréquences de maintenance
 app.get("/frequences", (req, res) => {
   db.query("SELECT * FROM frequence", (err, results) => {
@@ -211,6 +213,8 @@ app.get("/frequences", (req, res) => {
   });
 });
 
+
+app.use('/etatDevices', authenticateJWT);
 // Récupérer les etats de l'equipement
 app.get("/etatDevices", (req, res) => {
   db.query("SELECT id, etat FROM etatDevices", (err, results) => {
@@ -233,7 +237,7 @@ app.get("/devices", (req, res) => {
 
 
 
-
+app.use('/devicesCount', authenticateJWT);
 // Compter le nombre d'équipements
 
 app.get('/devicesCount', (req, res) => {
@@ -247,6 +251,7 @@ app.get('/devicesCount', (req, res) => {
   });
 });
 
+app.use('/temps-indisponibilite', authenticateJWT);
 app.get("/temps-indisponibilite", (req, res) => {
   const queryDevices = `SELECT numero_inventaire, dateInstallation FROM devices`;
 
@@ -338,6 +343,7 @@ app.get('/anomlies', (req, res) => {
   });
 });
 
+app.use('/anomliesavecdesignation', authenticateJWT);
 app.get('/anomliesavecdesignation', (req, res) => {
   const query = 'SELECT anomlies.id, anomlies.anomlie, anomlies.numero_inventaire, anomlies.created_at, anomlies.operateur, devices.device_name, devices.equipement_localisation FROM anomlies JOIN devices ON anomlies.numero_inventaire = devices.numero_inventaire ORDER BY anomlies.created_at DESC';
   db.query(query, (err, results) => {
@@ -374,7 +380,7 @@ app.delete('/anomlies/:id', (req, res) => {
   });
 });
 
-
+app.use('/photos_anomalies', authenticateJWT);
 app.post('/photos_anomalies', async (req, res) => {
   const { numero_inventaire, operateur, photos = [], anomlie, destinataire } = req.body; // photos est un tableau vide par défaut
 
@@ -435,7 +441,7 @@ app.post('/photos_anomalies', async (req, res) => {
 //--------------------------------------------------------- Anomalies
 
 //--------------------------------------------------------- Correctif
-
+app.use('/operationCorrectiveCount', authenticateJWT);
 app.get('/operationCorrectiveCount', (req, res) => {
     const sql = "SELECT id, etat, date_debut_intervention, date_fin_intervention, date_signalement FROM operationcorrective";
     db.query(sql, (err, results) => {
@@ -446,6 +452,7 @@ app.get('/operationCorrectiveCount', (req, res) => {
     });
 });
 // Récupérer toutes les opérations correctives
+app.use('/operationCorrective', authenticateJWT);
 app.get("/operationCorrective", (req, res) => {
   const query = `SELECT operationcorrective.id, operationcorrective.numero_inventaire, devices.device_name, operationcorrective.description_panne, operationcorrective.date_signalement, operationcorrective.date_debut_intervention, operationcorrective.date_fin_intervention, operationcorrective.description_diagnostic, operationcorrective.etat FROM operationcorrective JOIN devices ON operationcorrective.numero_inventaire = devices.numero_inventaire ORDER BY operationcorrective.date_signalement DESC`;
 
@@ -531,6 +538,7 @@ app.post("/operationCorrective", (req, res) => {
 
 
 // Mettre à jour une opération corrective pour ajouter ou modifier le diagnostic
+app.use('/operationCorrectiveDiagnostic', authenticateJWT);
 app.put("/operationCorrectiveDiagnostic/:id", (req, res) => {
   const { id } = req.params;
   const { description_diagnostic, diagnostic_par } = req.body;
@@ -550,7 +558,7 @@ app.put("/operationCorrectiveDiagnostic/:id", (req, res) => {
   });
 });
 
-
+app.use('/operationCorrectiveReparation', authenticateJWT);
 app.put("/operationCorrectiveReparation/:id", (req, res) => {
   const { id } = req.params;
   const { description_reparation, repare_par } = req.body;
@@ -623,7 +631,7 @@ app.put("/operationCorrectiveReparation/:id", (req, res) => {
   );
 });
 
-
+app.use('/commencerIntervention', authenticateJWT);
 app.put("/commencerIntervention/:id", (req, res) => {
   const { id } = req.params;
   const date_debut_intervention = new Date().toISOString().slice(0, 19).replace("T", " "); // Format YYYY-MM-DD HH:MM:SS
@@ -720,6 +728,7 @@ app.delete("/operationCorrective/:id", (req, res) => {
 //-------------------------------------------------------------------Preventif
 
 // Récupérer toutes les opérations préventives
+app.use('/planningPreventif', authenticateJWT);
 app.get("/planningPreventif", (req, res) => {
   const query = `
     SELECT id, numero_inventaire, description_preventif,
@@ -737,6 +746,7 @@ app.get("/planningPreventif", (req, res) => {
 });
 
 // Récupérer toutes les opérations préventives
+app.use('/planningPreventifAvecDesignation', authenticateJWT);
 app.get("/planningPreventifAvecDesignation", (req, res) => {
   const query = `
     SELECT operationPrevntif.id, operationPrevntif.numero_inventaire,
@@ -756,6 +766,7 @@ app.get("/planningPreventifAvecDesignation", (req, res) => {
   });
 });
 
+app.use('/commencerInterventionPreventif', authenticateJWT);
 app.post("/commencerInterventionPreventif", (req, res) => {
   const { numero_inventaire, operateur } = req.body;
   const date_debut_intervention = new Date().toISOString().slice(0, 19).replace("T", " "); // Format YYYY-MM-DD HH:MM:SS
@@ -825,7 +836,7 @@ app.post("/commencerInterventionPreventif", (req, res) => {
 });
 
 
-
+app.use('/operationPreventif', authenticateJWT);
 app.put("/operationPreventif/:id", (req, res) => {
   const { id } = req.params;
   const { description_preventif, operateur } = req.body;
@@ -919,6 +930,7 @@ app.get("/operationPreventif/:id", (req, res) => {
   });
 });
 
+app.use('/planningPreventifCount', authenticateJWT);
 app.get("/planningPreventifCount", (req, res) => {
   const today = new Date().toISOString().split("T")[0];
 
@@ -937,6 +949,7 @@ app.get("/planningPreventifCount", (req, res) => {
   });
 });
 
+app.use('/operationPreventifEnCours', authenticateJWT);
 app.get("/operationPreventifEnCours", (req, res) => {
   const query = `
     SELECT COUNT(*) AS count FROM operationPrevntif
@@ -961,7 +974,7 @@ app.get("/operationPreventifEnCours", (req, res) => {
 
 
 //-------------------------------------------------------------------Preventif
-
+app.use('/mtbf', authenticateJWT);
 app.get("/mtbf", (req, res) => {
   const sql = `
    SELECT
@@ -993,6 +1006,7 @@ app.get("/mtbf", (req, res) => {
   });
 });
 
+app.use('/mttr', authenticateJWT);
 app.get("/mttr", (req, res) => {
   const sql = `
     SELECT
