@@ -194,6 +194,7 @@ app.post("/devices", (req, res) => {
   });
 });
 
+app.use('/localisations', authenticateJWT);
 // Récupérer les localisations
 app.get("/localisations", (req, res) => {
   db.query("SELECT id, nom_localisation FROM localisation", (err, results) => {
