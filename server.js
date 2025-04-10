@@ -974,7 +974,6 @@ app.get("/operationPreventifEnCours", (req, res) => {
 
 
 //-------------------------------------------------------------------Preventif
-app.use('/mtbf', authenticateJWT);
 app.get("/mtbf", (req, res) => {
   const sql = `
    SELECT
@@ -1006,7 +1005,6 @@ app.get("/mtbf", (req, res) => {
   });
 });
 
-app.use('/mttr', authenticateJWT);
 app.get("/mttr", (req, res) => {
   const sql = `
     SELECT
